@@ -9,9 +9,11 @@ Folder with all files necessary to run the experiment described in the paper.
 
 
 **ldt_1803.psyexp**
+
 	Code for running the experiment on psychopy (version 2026.1)
 
 **stimuli.csv**
+
 	Table with experimental stimuli, 
 
 	Variables are: 
@@ -21,9 +23,11 @@ Folder with all files necessary to run the experiment described in the paper.
 	‘correct’: whether the correct response for the stimuli was pressing the key p or q
 
 **treinamento.xlsx**
+
 	Table with stimuli used in the practice section
 
 **error.mp3**
+
 	Sound file with the auditory stimuli presented to participant when they made an incorrect judgement
 
 ## **FOLDER: analyses**
@@ -55,6 +59,10 @@ Variables in the dataset are:
 	`POS`: part-of-speech - nouns (n) and verbs (v) 
 
 
-**analysis_final_report.html:** a report including codes and results for all analyses on reaction time and accuracy
+**analysis_final_report.html:** 
 
-**analysis_final_report.Rmd:** code to generate analysis_final_report.html. It allows for the replication of all analyses using raw_data_all_subjects.csv as the input file
+a report including codes and results for all analyses on reaction time and accuracy
+
+**analysis_final_report.Rmd:** 
+
+code to generate analysis_final_report.html. It allows for the replication of all analyses using raw_data_all_subjects.csv as the input file
