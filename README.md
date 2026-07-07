@@ -14,7 +14,7 @@ Code for running the experiment on psychopy (version 2026.1)
 
 **stimuli.csv**
 
-Table with experimental stimuli, 
+Table with experimental stimuli.
 
 Variables are: 
 
