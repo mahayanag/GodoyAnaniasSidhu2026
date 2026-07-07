@@ -10,13 +10,13 @@ Folder with all files necessary to run the experiment described in the paper.
 
 **ldt_1803.psyexp**
 
-	Code for running the experiment on psychopy (version 2026.1)
+Code for running the experiment on psychopy (version 2026.1)
 
 **stimuli.csv**
 
-	Table with experimental stimuli, 
+Table with experimental stimuli, 
 
-	Variables are: 
+Variables are: 
 
 	‘word’: the stimuli presented to participants;
 	‘cond’: the stimuli’s condition - iconic onomatopoeic words (onom), iconic non-onomatopoeic words 	(icon), non-iconic (nicon) and pseudo words (pseudo)
@@ -24,11 +24,11 @@ Folder with all files necessary to run the experiment described in the paper.
 
 **treinamento.xlsx**
 
-	Table with stimuli used in the practice section
+Table with stimuli used in the practice section
 
 **error.mp3**
 
-	Sound file with the auditory stimuli presented to participant when they made an incorrect judgement
+Sound file with the auditory stimuli presented to participant when they made an incorrect judgement
 
 ## **FOLDER: analyses**
 
