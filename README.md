@@ -19,7 +19,9 @@ Table with experimental stimuli.
 Variables are: 
 
 `word`: the stimuli presented to participants
+
 `cond`: the stimuli’s condition - iconic onomatopoeic words (onom), iconic non-onomatopoeic words 	(icon), non-iconic (nicon) and pseudo words (pseudo)
+
 `correct`: whether the correct response for the stimuli was pressing the key p or q
 
 **treinamento.xlsx**
