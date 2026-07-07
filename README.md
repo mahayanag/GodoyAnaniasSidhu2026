@@ -1,7 +1,7 @@
 Repository contains the following files and folders:
 
 
-**FOLDER: files_experiment**
+## **FOLDER: files_experiment**
 
 Folder with all files necessary to run the experiment described in the paper.
 
@@ -24,7 +24,7 @@ Folder with all files necessary to run the experiment described in the paper.
 **error.mp3**
 	Sound file with the auditory stimuli presented to participant when they made an incorrect judgement
 
-**FOLDER: analyses**
+## **FOLDER: analyses**
 
 Folder with all files necessary to replicate the statistical analyses described in the experiment.
 
