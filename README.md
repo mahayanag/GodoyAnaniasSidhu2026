@@ -1,16 +1,15 @@
 Repository contains the following files and folders:
 
 
-
 **FOLDER: files_experiment**
 
 Folder with all files necessary to run the experiment described in the paper.
 
 
-	**ldt_1803.psyexp**
+**ldt_1803.psyexp**
 	Code for running the experiment on psychopy (version 2026.1)
 
-	**stimuli.csv**
+**stimuli.csv**
 	Table with experimental stimuli, 
 
 	Variables are: 
@@ -19,17 +18,17 @@ Folder with all files necessary to run the experiment described in the paper.
 	‘cond’: the stimuli’s condition - iconic onomatopoeic words (onom), iconic non-onomatopoeic words 	(icon), non-iconic (nicon) and pseudo words (pseudo)
 	‘correct’: whether the correct response for the stimuli was pressing the key p or q
 
-	**treinamento.xlsx**
+**treinamento.xlsx**
 	Table with stimuli used in the practice section
 
-	**error.mp3**
+**error.mp3**
 	Sound file with the auditory stimuli presented to participant when they made an incorrect judgement
 
 **FOLDER: analyses**
 
 Folder with all files necessary to replicate the statistical analyses described in the experiment.
 
-	**raw_data_all_subjects.csv**
+**raw_data_all_subjects.csv**
 
 	Complete data for all three experimental conditions for all 40 participants in the study (n = 120 per participant). Data for pseudowords not used in the analyses and not included in the dataset, following the same guidelines for data sharing and data analyses as the original study. Raw data is not provided to ensure participant anonymity.
 
@@ -54,6 +53,6 @@ Folder with all files necessary to replicate the statistical analyses described 
 	"POS": part-of-speech - nouns (n) and verbs (v) 
 
 
-	**analysis_final_report.html:** a report including codes and results for all analyses on reaction time and accuracy
+**analysis_final_report.html:** a report including codes and results for all analyses on reaction time and accuracy
 
-	**analysis_final_report.Rmd:** code to generate analysis_final_report.html. It allows for the replication of all analyses using raw_data_all_subjects.csv as the input file
+**analysis_final_report.Rmd:** code to generate analysis_final_report.html. It allows for the replication of all analyses using raw_data_all_subjects.csv as the input file
