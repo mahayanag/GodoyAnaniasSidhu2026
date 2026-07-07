@@ -1,0 +1,485 @@
+---
+title: "analysis"
+author: "Mahayana Godoy"
+date: "2026-05-31"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load Packages
+
+
+```{r, warning=FALSE, message=FALSE}
+require(lme4)
+require(tidyverse)
+require(data.table)
+require(lmerTest)
+require(afex)
+require(RePsychLing)
+require(r2glmm)
+require(performance)
+require(emmeans)
+```
+
+
+## Main analyses
+
+All analyses presented in this section strictly follow the analysis plan outlined in the Registered Report. 
+
+### Load and Prepare Data (section 2.1)
+
+For the sake of replication, we'll use and adapt Sidhu et al's code. As predicted in our Registered Report, we won't adopt any exclusion criteria beyond those described in the original study. 
+
+According to our RR:
+
+> Consistent with the original study, we will apply the following steps to clean our data for the analysis of reaction times:
+
+> 1. All incorrect responses will be excluded;
+
+> 2. Trials with reaction times less than 200msec or more than 3000msec will be removed;
+
+> 3. Remaining trials that fall over 2.5 standard deviations from a participant’s mean will also be removed.
+
+
+```{r}
+#load data
+
+data<-read.csv("data/raw_data_all_subjects.csv", stringsAsFactors = T)
+
+#inspect
+str(data)
+
+
+```
+
+
+Cleaning the dataset
+
+
+```{r}
+
+#remove inaccurate trials
+nrow1 <- nrow(data)
+data <- data %>% filter(answer == 1)
+nrow2 <- nrow(data)
+paste((((nrow1 - nrow2)/nrow1)*100), "percent of trials were removed because of inaccurate responses (compare to Sidhu et al: 9.4%; but they had 80 pp)")
+
+#remove very slow/fast trials
+
+#first: change rt to ms
+
+data$rt <- data$rt*1000
+
+#remove very slow/fast trials
+
+slow <- filter(data, rt > 3000)
+fast <- filter(data, rt < 200)
+nslow <- nrow(slow)
+nfast <- nrow(fast)
+
+paste(((nslow/nrow(data))*100), "percent of trials were removed for being too slow (sidhu et al = 0.82%)")
+paste(((nfast/nrow(data))*100), "percent of trials were removed for being too fast (sidhu et al. = 0.47)")
+
+data <- filter(data, rt >= 200 & rt <= 3000)
+
+#find and remove subject outliers
+data <- as.data.table(data)
+
+data <- data[, zRT := scale(rt), by = participant]
+
+outliers<-data[zRT < -2.5 | zRT > 2.50]
+paste((nrow(outliers)/nrow(data))*100, "percent of trials were removed for being outliers (sidhu et al: 3.15)")
+
+data <- data[zRT >= -2.5 & zRT <= 2.50]
+
+paste("this left a total of", nrow(data), "trials to be analyzed")
+
+```
+
+
+Summing up: data loss was similar to Sidhu et al.'s, the only difference being the rate of inaccurate responses. Our participants made fewer mistakes, and we did not have any observation below the threshold of 200ms.Maybe that's because we are not compensating our participants in any form. Those who participated in the task did so because they were willing to help, not because the wanted cash/needed credit courses, so maybe they were more engaged in the task. In the past, this has been the case for replications in our lab (we haven't published it yet, but in a recent replication of an iconicity rating task, our data loss was ~0.08% for participants who were only clicking through the experiment, compared to ~10% in the original study, in which participants received cash or credit course for their time)
+
+Let's check n per subject.
+
+```{r}
+data %>% group_by(participant) %>% summarise(n = n()) %>% arrange(n) %>% mutate(perc = n/120)
+```
+Ok, participant with the highest number of incorrect responses scored correctly more than 88% of the trials. That's good.
+
+Now let's prepare the dataset.
+
+
+```{r}
+
+#Preparing variables
+
+str(data) #factor already coded as factor
+
+# Centering predictors
+
+# length
+data$ort_nlet<-scale(data$ort_nlet, center = TRUE, scale = TRUE)
+data$ort_nlet<-as.numeric(data$ort_nlet)
+
+# log freq
+data$freq_corp_log<-scale(data$freq_corp_log, center = TRUE, scale = TRUE)
+data$freq_corp_log<-as.numeric(data$freq_corp_log)
+
+#OLD 
+
+data$ort_neig_dl<-scale(data$ort_neig_dl, center = TRUE, scale = TRUE)
+data$ort_neig_dl<-as.numeric(data$ort_neig_dl)
+
+# icon
+data$icon_m<-scale(data$icon_m, center = TRUE, scale = TRUE)
+data$icon_m<-as.numeric(data$icon_m)
+
+# order
+
+data$trial_n<-scale(data$trial_n, center = TRUE, scale = TRUE)
+data$trial_n<-as.numeric(data$trial_n)
+
+```
+
+
+### Reaction time (section 2.2)
+
+Let's follow our analysis plan: 
+
+> We will also rely on the same model reported in the original study: a linear mixed effect model with reaction times as the response variable, Iconicity score as a predictor, and length, log frequency and orthographic Levenshtein distance as co-variates. The model, summarized in (1), will also include (following the original study) random intercepts for participants and items. The statistical model used in Sidhu et al. (2020) did not include a random slope for iconicity per participant due to convergence issues, but we will add this random effect if the model converges. Although Iconicity will be treated as a factor for stimuli selection, it will be coded as a continuous variable in the analyses to match the original study. Therefore, we will use Iconicity scores from Godoy (2026).
+
+> (1) reaction time ~ iconicity + length + log frequency + orthographic Levenshtein distance + (1+iconicity|participant) + (1|word)
+
+
+
+```{r}
+
+## PORTUGUESE
+m1 <- lmer(rt~ort_nlet+freq_corp_log+ort_neig_dl+icon_m+(1+icon_m|participant)+(1|word), data = data)
+
+### convergence issues, let's remove the random slope
+
+m1 <- lmer(rt~ort_nlet+freq_corp_log+ort_neig_dl+icon_m+(1|participant)+(1|word), data = data)
+
+## results
+summary(m1)
+
+```
+
+
+Original study found that reaction times correlated positively with orthographic Levenshtein distance and negatively with iconicity and frequency. In our dataset, only the negative correlation between reaction times and frequency was significant. We could not replicate the main finding following our analysis plan.
+
+### Accuracy (section 2.3)
+
+Now let's check accuracy. According to our RR:
+
+> Following the original study’s analysis, we will also run a logistic mixed effects model with accuracy as the response variable and the same fixed and random variables as in the reaction time analysis. 
+
+We'll first have to load the data again and go through the cleaning steps outlined above, except for removing the incorrect responses.
+```{r}
+## Preparing dataset
+
+data2 <- read.csv("data/raw_data_all_subjects.csv", stringsAsFactors = T)
+
+#remove nonword trials
+data2 <- data2 %>% filter(cond %in% c("onom", "icon", "nicon")) %>% droplevels()
+
+
+#remove very slow/fast trials
+
+#first: change rt to ms
+
+data2$rt <- data2$rt*1000
+
+#remove very slow/fast trials
+
+slow <- filter(data2, rt > 3000)
+fast <- filter(data2, rt < 200)
+nslow <- nrow(slow)
+nfast <- nrow(fast)
+
+paste(((nslow/nrow(data))*100), "percent of trials were removed for being too slow")
+paste(((nfast/nrow(data))*100), "percent of trials were removed for being too fast")
+
+data2 <- filter(data2, rt >= 200 & rt <= 3000)
+
+#find and remove subject outliers
+data2 <- as.data.table(data2)
+
+data2 <- data2[, zRT := scale(rt), by = participant]
+
+outliers<-data2[zRT < -2.5 | zRT > 2.50]
+paste((nrow(outliers)/nrow(data2))*100, "percent of trials were removed for being outliers")
+
+data2 <- data2[zRT >= -2.5 & zRT <= 2.50]
+
+paste("this left a total of", nrow(data), "trials to be analyzed")
+
+#Preparing variables
+
+str(data) #factor already coded as factor
+
+# Centering predictors
+
+# length
+data2$ort_nlet<-scale(data2$ort_nlet, center = TRUE, scale = TRUE)
+data2$ort_nlet<-as.numeric(data2$ort_nlet)
+
+# log freq
+data2$freq_corp_log<-scale(data2$freq_corp_log, center = TRUE, scale = TRUE)
+data2$freq_corp_log<-as.numeric(data2$freq_corp_log)
+
+#OLD 
+
+data2$ort_neig_dl<-scale(data2$ort_neig_dl, center = TRUE, scale = TRUE)
+data2$ort_neig_dl<-as.numeric(data2$ort_neig_dl)
+
+# icon
+data2$icon_m<-scale(data2$icon_m, center = TRUE, scale = TRUE)
+data2$icon_m<-as.numeric(data2$icon_m)
+
+# order
+
+data2$trial_n<-scale(data2$trial_n, center = TRUE, scale = TRUE)
+data2$trial_n<-as.numeric(data2$trial_n)
+
+## response accuracy
+
+data2$answer <- as.factor(data2$answer)
+
+```
+
+
+Now the analysis.
+
+
+```{r}
+
+## PORTUGUESE
+gm1 <- glmer(answer ~ ort_nlet+freq_corp_log+ort_neig_dl+icon_m+(1+icon_m|participant)+(1|word), data = data2, family = "binomial", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=100000)))
+
+### convergence issues, let's remove the random slope
+
+gm1 <- glmer(answer ~ ort_nlet+freq_corp_log+ort_neig_dl+icon_m+(1|participant)+(1|word), data = data2, family = "binomial", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=100000)))
+
+## results
+summary(gm1)
+
+```
+
+
+
+The original study found that frequency, length and iconicity increased accuracy. We only found a significant effect for frequency, so we did not replicate the original finding.
+
+
+## Additional analysis
+
+All analyses presented in this section strictly follow the analysis plan outlined in the Registered Report. 
+
+### Additional analysis 1: Goodness of fit (section 2.4)
+
+According to our RR
+
+> Sidhu et al. (2020) do not mention whether their model violates linear model’s assumptions, specifically, multicollinearity, homoscedasticity and normality of the residuals. We will perform a residual analysis to assess the goodness of fit of the initial statistical model. In case residuals violate one of the aforementioned assumptions, we will take on the following steps to model our data.
+
+
+>> - In case of violation of multicollinearity, we will drop one of the redundant variables that may be causing multicollinearity.
+
+>> - In case of violation of the normality assumption, we will log-transform reaction times. This transformation is the most commonly applied to reaction time data due to their tendency to be right-skewed.
+
+>> - In case of violation of homoscedasticity, even in the face of log-transformation (which tend to resolve heteroscedasticity issues), we will explore other options to transform the data taking into account the type of the violation present in the model, and how the data behave after these transformations are applied to it.
+
+Let's start with multicolinearity.
+
+
+```{r}
+library(car)
+vif(m1)
+```
+
+
+Ok, no issues. All VIFs < 2. 
+
+Now let's check the model's residuals.
+
+
+```{r, fig.width=16, fig.height=14, out.width="100%"}
+check_model(m1)
+```
+
+
+Ok, the distribution of the residuals is not normal. This is expected in reaction time data. We can fix that logtransforming the response variable. I doubt this wil change anything, but let's go (this is exploratory).
+
+
+```{r}
+
+## logtransform rts
+
+m1log <- lmer(log(rt)~ort_nlet+freq_corp_log+ort_neig_dl+icon_m+(1|participant)+(1|word), data = data)
+
+## results
+summary(m1log)
+
+```
+
+
+No changes in the result, as predicted. Let's check the model's assumptions.
+
+```{r, fig.width=16, fig.height=14, out.width="100%"}
+check_model(m1log)
+```
+
+This is better, in general, but normality is still an issue. In any case, estimate of fixed effects in LMMs are usually robust under a violation of normality, so we shouldn't worry too much. But if we really want to avoid that, we could follow Lo and Andrews (2015) and model the data using the gamma distribution because our data is right-skewed. Again, I doubt this would change our results.
+
+```{r}
+
+## logtransform rts
+
+m1gamma <- glmer(rt~ort_nlet+freq_corp_log+ort_neig_dl+icon_m+(1|participant)+(1|word), data = data, family = Gamma(link = "identity"))
+
+## results
+summary(m1gamma)
+
+```
+No difference regarding significant effects. We will not run diagnostics here as glmms do not have the same assumptions as lmms.
+
+All in all, there is no effect of iconicity on reaction times in our data.
+
+### Additional analysis 1: Iconicity*Presentation Order (section 2.5)
+
+According to our RR
+
+> trial number and its interaction with iconicity to the model described in section 3.2. Results showed a significant interaction between those factors, such that iconicity had a greater effect on reaction times for later trials. A detailed inspection of the data showed that iconicity had no effect on reaction times for the first 60 experimental trials, but the negative correlation between those two variables were evident for the last two third of trials. This corroborates the list context effect and indicates that participants may “learn” to use iconicity as a valuable cue during the task.
+
+> In case we successfully replicate the findings in Sidhu et al. (2020) with the main analyses described in section 3.2, we will run this analysis to test whether Brazilian participants are also prone to this interaction effect. In case we fail to replicate the main finding that iconicity negatively correlates with reaction time, this additional analysis may help us gain insight on the differences between participants. It may be the case that there is no iconicity effect at all for the Brazilian cohort, or it may be the case that an effect only emerges in the final trials of the experimental items, making it too subtle to be observed as a main effect in the dataset.
+
+So, here we have an exploratory analysis, trying to figure out why we did not find any iconicity effect in our analysis of RT. Here, we are using the same model fit in the original study. Considering our goal of replicating the findings and also making adjustments depending on data distribution, we'll run the model used by Sidhu et al. and the glmer with a gamma distribution. 
+
+
+```{r}
+## lmm
+m2 <- lmer(log(rt)~ort_nlet+freq_corp_log+ort_neig_dl+icon_m*trial_n+(1+trial_n|participant)+(1|word), data = data)
+
+summary(m2)
+```
+
+
+Now with the gamma distribution.
+
+
+```{r, warning=FALSE}
+m2gamma <- glmer(rt~ort_nlet+freq_corp_log+ort_neig_dl+icon_m*trial_n+(1+trial_n|participant)+(1|word), data = data, family = Gamma(link = "identity"))
+
+
+summary(m2gamma)
+
+```
+
+No interaction.
+
+Now let's do the same with accuracy data.
+
+```{r}
+## PORTUGUESE
+gm2 <- glmer(answer ~ ort_nlet+freq_corp_log+ort_neig_dl+icon_m*trial_n+(1+trial_n|participant)+(1|word), data = data2, family = "binomial", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=100000)))
+
+### convergence issues, let's remove the random slope
+
+gm2 <- glmer(answer ~ ort_nlet+freq_corp_log+ort_neig_dl+icon_m*trial_n+(1|participant)+(1|word), data = data2, family = "binomial", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=100000)))
+
+## results
+summary(gm2)
+```
+
+No significant interaction between iconicity and trial order in any of the analysis.
+
+### Additional analysis 3: Iconicity as a factor (section 2.6)
+
+According to our RR:
+
+> (...) we may run the same model described in section 3.2, but this time dummy-coding Iconicity as a factor with three levels: non-iconic words, non-onomatopoeic iconic words and onomatopoeic iconic words. If imitativeness plays a greater role than iconicity itself in word recognition, we may observe faster reaction times for this latter group. The aim of this additional analysis is not to replicate the original study’s main findings, but rather to shed light on the causes of a possible null effect.
+
+Let's run the same analysis, but using 'cond' instead of 'icon_m'. 
+
+Let's start with an inspection of the data.
+
+```{r}
+library(see)
+
+ggplot(data, aes(cond, rt, fill = cond)) +
+geom_violinhalf(position = position_nudge(x = .2, y = 0)) +
+geom_jitter(alpha = 0.1, width = 0.15) +
+  stat_summary(fun=mean, geom="point", shape=18,
+                 size=3, color="red")+
+theme_bw()+
+  theme(legend.position = "none")
+```
+
+Those plots are so similar across conditions that we don't even need a model to tell us there's no effect of condition in there. 
+
+But let's do it anyway so we can control co-variables.
+
+```{r}
+## PORTUGUESE
+m1factor <- lmer(log(rt)~ort_nlet+freq_corp_log+ort_neig_dl+cond+(1+cond|participant)+(1|word), data = data, )
+
+### convergence issues, let's remove the random slope
+
+m1factor <- lmer(log(rt)~ort_nlet+freq_corp_log+ort_neig_dl+cond+(1|participant)+(1|word), data = data)
+
+### remove cond to check if it improves the model
+
+m2factor <- lmer(log(rt)~ort_nlet+freq_corp_log+ort_neig_dl+(1|participant)+(1|word), data = data)
+
+## compare
+
+anova(m1factor, m2factor)
+
+## it doesn't
+```
+
+
+Ok, so no effect of condition (onomatopoeic, iconic-non onomatopoeic and non-iconic) in the model. We can plot the estimated mean from the model.
+
+
+```{r}
+ph <- emmeans(m1factor, ~cond, pbkrtest.limit = 4475)
+
+plot(ph, color = "black")+
+  coord_flip()+
+  theme_bw()
+```
+
+
+No difference, but it is telling that, numerically, onomatopoeias led to longer rts in Brazilian Portuguese. I think these words are so morpho/phonologically marked in the language when compared to English, that this may disrupt lexical access somehow. But this is just speculation, and we didn't find any significant effect anyway.
+
+Ok, now the same analysis with accuracy data.
+
+```{r}
+
+## PORTUGUESE
+gm1factor <- glmer(answer ~ ort_nlet+freq_corp_log+ort_neig_dl+icon_m+(1+icon_m|participant)+(1|word), data = data2, family = "binomial", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=100000)))
+
+### convergence issues, let's remove the random slope
+
+gm1factor <- glmer(answer ~ ort_nlet+freq_corp_log+ort_neig_dl+icon_m+(1|participant)+(1|word), data = data2, family = "binomial", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=100000)))
+
+## nested model
+
+gm2factor <- glmer(answer ~ ort_nlet+freq_corp_log+ort_neig_dl+(1|participant)+(1|word), data = data2, family = "binomial", control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=100000)))
+
+
+## results
+anova(gm1factor, gm2factor)
+
+```
+
+<br>
+
+This concludes all analyses planned in our Registered Report. We could not replicate the main finding of Sidhu et al. 
